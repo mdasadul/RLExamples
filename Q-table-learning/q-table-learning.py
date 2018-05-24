@@ -32,3 +32,18 @@ print("Score over time: "+ str(sum(total_reward)/num_episodes))
 
 print("Final Q-table Values")
 print(Q)
+
+# Lets play FrozenLake by using the Q-table
+
+#environment.reset()
+for episode in range(5):
+    state = environment.reset()
+    step = 0
+    print("Episode", episode)
+
+    for step in range(100):
+        environment.render()
+        action = np.argmax(Q[state,:])
+
+        new_state, reward, done, _ = environment.step(action)
+        if 
