@@ -10,14 +10,17 @@ class RLMaze(object):
         self.epsilon = epsilon
         self.actions = actions
         self.terminal = terminal
-        self.q_table = pd.DataFrame(columns=actions)
+        self.q_table = pd.DataFrame(columns=actions,dtype=np.float64)
         
     def choose_action(self, state):
         self.check_state_exists(state)
         if np.random.uniform() > self.epsilon :
             action_name = np.random.choice(self.actions)
         else:
-            action_name = self.q_table.loc[state,:].max()
+            state_action = self.q_table.loc[state,:]
+            state_action = state_action.reindex(np.random.permutation(state_action.index))
+            action_name = state_action.idxmax()
+
         return action_name
 
 
@@ -39,20 +42,29 @@ if __name__ =='__main__':
     env = Maze()
     
     
-    ACTIONS = ['L', 'R','U','D']     # available actions
+    ACTIONS = list(range(env.n_actions))     # available actions
     EPSILON = 0.9   # greedy police
     ALPHA = 0.1     # learning rate
     GAMMA = 0.9    # discount factor
-    MAX_EPISODES = 13   # maximum episodes
+    MAX_EPISODES = 20   # maximum episodes
     TERMINAL = 'terminal'
     rlmaze = RLMaze(ACTIONS, ALPHA, GAMMA, EPSILON,  TERMINAL)
     for episode in range(MAX_EPISODES):
         state = env.reset()
+        step=0
         while True:
             env.render()
             action = rlmaze.choose_action(str(state))
             new_state, reward, done = env.step(action)
             rlmaze.reinforcement_learning(str(state),action,reward,str(new_state))
             state = new_state
+            step +=1
             if done:
+                if reward ==1:
+                    print("SUCCESS  after Number of steps %d  in epicode %d", (step,episode))
+                else:
+                    print("FAIL  after Number of steps %d  in epicode %d", (step,episode))
+         
                 break
+        
+
