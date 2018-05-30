@@ -74,10 +74,11 @@ def reinforcement_learning():
         while not done:
             A = choose_action(S,q_table)
             new_S, R = get_env_feedback(S, A)
-            if new_S == TERMINAL:
+            if new_S != TERMINAL:
                 q_target = R+GAMMA*q_table.loc[new_S,:].max()
                 
             else:
+                
                 q_target = R
                 done = True
             q_table.loc[S,A] += ALPHA *(q_target-q_table.loc[S,A])

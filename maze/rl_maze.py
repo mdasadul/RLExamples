@@ -23,7 +23,7 @@ class RLMaze(object):
 
     def check_state_exists(self,state):
         if state not in self.q_table.index:
-            self.q_table.loc[state] = [0]*self.actions
+            self.q_table.loc[state] = [0]*len(self.actions)
             
 
     def reinforcement_learning(self,state,action,reward,new_state):
@@ -50,9 +50,9 @@ if __name__ =='__main__':
         state = env.reset()
         while True:
             env.render()
-            action = rlmaze.choose_action(state)
-            new_state, reword, done = env.step(action)
-            rlmaze.reinforcement_learning(state,action,reward,new_state)
+            action = rlmaze.choose_action(str(state))
+            new_state, reward, done = env.step(action)
+            rlmaze.reinforcement_learning(str(state),action,reward,str(new_state))
             state = new_state
             if done:
                 break
