@@ -29,6 +29,7 @@ class DeepQNetwork(object):
         self.num_layers2 = num_layers2
         # each state has two information and there are two states+action+reward=6
         self.reply_memory = np.zeros((self.reply_memory_size,n_features*2+2))
+        self.memory_counter = 0
         self.__build_graph()
 
         target_params = tf.get_collection('target_params')
@@ -36,7 +37,7 @@ class DeepQNetwork(object):
         self.exchange_params_op = [tf.assign(e,t) for (e,t)in zip(eval_params, target_params)]
 
         self.sess = tf.Session()
-
+        
         if save_graph:
             tf.summary.FileWriter('logs',self.sess.graph)
         
@@ -96,6 +97,17 @@ class DeepQNetwork(object):
     
     def save_experience(self, state, action, reward, state_):
         
+        transition = np.hstack((state,[action,reward],state_))
+
+        memory_index =  self.reply_memory_size % self.memory_counter
+        self.reply_memory[memory_index,:] = transition
+        self.memory_counter +=1
+    
+
+    def choose_action(self, state):
+        pass
+
+
     
     def learn(self):
         pass
