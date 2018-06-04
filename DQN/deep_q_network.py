@@ -15,7 +15,7 @@ class DeepQNetwork(object):
                 replace_target_step = 300,
                 reply_memory_size = 5000,
                 num_layers1 = 10,
-                num_layers2 = 20,
+                batch_size = 32,
                 save_graph = False):
         self.n_actions = n_actions
         self.n_features = n_features
@@ -26,7 +26,7 @@ class DeepQNetwork(object):
         self.global_steps = 0
         self.reply_memory_size = reply_memory_size
         self.num_layers1 = num_layers1
-        self.num_layers2 = num_layers2
+        self.batch_size = batch_size
         # each state has two information and there are two states+action+reward=6
         self.reply_memory = np.zeros((self.reply_memory_size,n_features*2+2))
         self.memory_counter = 0
@@ -116,7 +116,17 @@ class DeepQNetwork(object):
 
     
     def learn(self):
-        pass
-    
+        
+        if self.global_steps % self.replace_target_step == 0:
+            tf.sess.run(self.exchange_params_op)
+
+        if self.memory_counter > self.reply_memory_size:
+            sample_batch = np.random.choice(self.reply_memory_size,self.batch_size)
+        else:
+            sample_batch = np.random.choice(self.memory_counter,self.batch_size)
+        batch_state = self.reply_memory[sample_batch,:self.n_features]
+        target_q = self.reply_memory[sample_batch,self.n_features+1]
+        loss,_ = self.sess.run([self.loss, self.train_op],feed_dict={self.state:batch_state, self.target_q:target_q})
+        
 
 
