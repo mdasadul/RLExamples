@@ -35,7 +35,6 @@ print(Q)
 
 # Lets play FrozenLake by using the Q-table
 
-
 environment.reset()
 for episode in range(5):
     state = environment.reset()
@@ -46,8 +45,8 @@ for episode in range(5):
         environment.render()
         action = np.argmax(Q[state,:])
 
-        new_state, reward, done, info = environment.step(action)
-        print(info,new_state)
-        if done:
+        new_state, reward, done, _ = environment.step(action)
+        if done ==True:
             break
         state = new_state
+environment.close()
