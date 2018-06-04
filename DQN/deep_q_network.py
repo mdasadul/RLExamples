@@ -105,8 +105,14 @@ class DeepQNetwork(object):
     
 
     def choose_action(self, state):
-        pass
 
+        state = state[np.newaxis,:]
+        if np.random.uniform()< self.epsilon:
+            action_value = self.sess.run(self.eval_net,feed_dict={self.state:state})
+            action = np.argmax(action_value)
+        else:
+            action = np.random.randint(self.n_actions)
+        return action
 
     
     def learn(self):
