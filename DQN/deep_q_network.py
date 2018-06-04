@@ -46,14 +46,15 @@ class DeepQNetwork(object):
         self.state = tf.placeholder(tf.float32, shape=[None,self.n_features], name='present_state')
         
         self.target_q = tf.placeholder(tf.float32, shape=[None, self.n_actions],name='target_q')
+        weight_initializer, bias_initializer =  tf.random_normal_initializer(0.0,0.4),tf.constant_initializer(0.1)
         with tf.variable_scope('eval_net'):
-            collection_names, weight_initializer, bias_initializer = ['eval_params',tf.GraphKeys.GLOBAL_VARIABLES], tf.random_normal_initializer(0.0,0.4),tf.constant_initializer(0.1)
+            collection_names= ['eval_params',tf.GraphKeys.GLOBAL_VARIABLES]
             with tf.variable_scope('layer1'):
                 w1 = tf.get_variable('w1',shape=[self.n_features,self.num_layers1],
                 initializer=weight_initializer, collections=collection_names)
 
                 b1 = tf.get_variable('b1',shape=[1,self.num_layers1], initializer= bias_initializer, collections= collection_names)
-                self.layer1 = tf.nn.relu(tf.matmul(self.state,w1)+b1)
+                layer1 = tf.nn.relu(tf.matmul(self.state,w1)+b1)
             
             with tf.variable_scope('layer2'):
                 w2 = tf.get_variable('w2', shape=[self.num_layers1,self.n_actions], 
@@ -61,19 +62,40 @@ class DeepQNetwork(object):
 
                 b2 = tf.get_variable('b2',shape=[1,self.n_actions],initializer=bias_initializer,collections=collection_names)
 
-                self.eval_net = tf.matmul(self.layer1,w2)+b2
+                self.eval_net = tf.matmul(layer1,w2)+b2
 
-            with tf.variable_scope('loss'):
-                self.loss = tf.reduce_mean(tf.squared_difference(self.eval_net,self.target_q))
-            with tf.variable_scope('train_op'):
-                self.train_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss)
-            
+        with tf.variable_scope('loss'):
+            self.loss = tf.reduce_mean(tf.squared_difference(self.eval_net,self.target_q))
+        with tf.variable_scope('train_op'):
+            self.train_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss)
 
+        # build target network
+
+        self.state_ = tf.placeholder(tf.float32, shape=[None,self.n_features], name='next_state')
+        
+        with tf.variable_scope('target_net'):
+            collection_names = ['target_params',tf.GraphKeys.GLOBAL_VARIABLES]
+            with tf.variable_scope('layer1'):
+                w1 = tf.get_variable('w1',shape=[self.n_features,self.num_layers1],
+                initializer=weight_initializer, collections=collection_names)
+
+                b1 = tf.get_variable('b1',shape=[1,self.num_layers1], initializer= bias_initializer, collections= collection_names)
+                layer1 = tf.nn.relu(tf.matmul(self.state_,w1)+b1)
             
+            with tf.variable_scope('layer2'):
+                w2 = tf.get_variable('w2', shape=[self.num_layers1,self.n_actions], 
+                initializer=weight_initializer, collections=collection_names)
+
+                b2 = tf.get_variable('b2',shape=[1,self.n_actions],initializer=bias_initializer,collections=collection_names)
+
+                self.next_states = tf.matmul(layer1,w2)+b2
+
+
+
 
     
     def save_experience(self, state, action, reward, state_):
-        pass
+        
     
     def learn(self):
         pass
