@@ -6,16 +6,16 @@ class DoubleDQN(object):
         self,
         n_actions,
         n_features,
-        learning_rate = 0.01,
+        learning_rate = 0.005,
         gamma = 0.9,
         max_epsilon = 0.9,
         replace_target_step = 300,
         double_dqn = False,
         sess = None,
-        memory_size = 5000,
-        hidden_layer_size = 10,
+        memory_size = 3000,
+        hidden_layer_size = 20,
         batch_size = 32,
-        epsilon_increment = None
+        epsilon_increment = 0.01
     ):
         self.n_actions = n_actions
         self.n_features = n_features
@@ -30,16 +30,15 @@ class DoubleDQN(object):
         self.batch_size = batch_size
         self.memory = np.zeros((memory_size, n_features * 2 + 2))
         self.epsilon_increment = epsilon_increment
-        self.replace_target_op = [tf.assign(t,e) for (e,t) in zip(eval_params, target_params)]
-
+        self.epsilon_max = max_epsilon
         self.epsilon = 0 if epsilon_increment is not None else self.epsilon_max
         
-
 
         self.build_graph()
         eval_params = tf.get_collection('eval_net_params')
         target_params = tf.get_collection('target_net_params')
-        
+        self.replace_target_op = [tf.assign(t,e) for (e,t) in zip(eval_params, target_params)]
+
 
         if self.sess ==None:
             self.sess = tf.Session()
@@ -48,7 +47,7 @@ class DoubleDQN(object):
         self.q = []
         self.q_running = 0
 
-        self.epsilon = 0
+        
         self.memory_counter = 0
         self.global_step = 0
         self.total_loss =[]
@@ -92,7 +91,7 @@ class DoubleDQN(object):
             return layer2 
 
         c_name_eval = ['eval_net_params', tf.GraphKeys.GLOBAL_VARIABLES]
-        c_name_target = ['eval_net_params', tf.GraphKeys.GLOBAL_VARIABLES]
+        c_name_target = ['target_net_params', tf.GraphKeys.GLOBAL_VARIABLES]
         with tf.variable_scope('eval_net'):
             self.eval_net = build_net(c_name_eval,self.state)
 
@@ -102,7 +101,7 @@ class DoubleDQN(object):
         with tf.variable_scope('loss'):
             self.loss = tf.reduce_mean(tf.squared_difference(self.q_target, self.eval_net))
         with tf.variable_scope('train'):
-            self.training_op = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss)
+            self.training_op = tf.train.RMSPropOptimizer(self.learning_rate).minimize(self.loss)
         self.state_ = tf.placeholder(dtype = tf.float32,
                                     shape=[None,self.n_features],
                                     name='next_state')
@@ -124,7 +123,7 @@ class DoubleDQN(object):
         self.q_running = self.q_running* 0.99 + 0.01* eval_actions.max()
         self.q.append(self.q_running)
         if self.epsilon < np.random.uniform():
-            action = np.random.choice(0,self.n_actions)
+            action = np.random.randint(0,self.n_actions)
 
         return action
 
@@ -142,7 +141,7 @@ class DoubleDQN(object):
 
 
         q_next, q_eval_next = self.sess.run([self.q_next,self.eval_net],feed_dict={self.state: batch_memory[:,-self.n_features:],
-                                    self.state_: batch_memory[:,-self.n_features] })
+                                    self.state_: batch_memory[:,-self.n_features:] })
         
         q_eval = self.sess.run(self.eval_net, feed_dict={self.state: batch_memory[:,:self.n_features]})
         
