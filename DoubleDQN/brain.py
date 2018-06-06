@@ -39,7 +39,8 @@ class DoubleDQN(object):
             self.sess = tf.Session()
             self.sess.run(tf.global_variables_initializer())
         
-        self.q = None
+        self.q = []
+        self.q_running = 0
 
         self.epsilon = 0
         self.memory_counter = 0
@@ -108,7 +109,16 @@ class DoubleDQN(object):
         self.memory_counter += 1
         
     def choose_action(self, observation):
-        pass
+        observation = observation[np.newaxis,:]
+        eval_actions = self.sess.run(self.eval_net, feed_dict={self.state:observation})
+        action = np.argmax(eval_actions)
+        self.q_running = self.q_running* 0.99 + 0.01* eval_actions.max()
+        self.q.append(self.q_running)
+        if self.epsilon < np.random.uniform():
+            action = np.random.choice(0,self.n_actions)
+
+        return action
+
     
     def learn(self):
         pass
