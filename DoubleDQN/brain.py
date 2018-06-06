@@ -27,7 +27,7 @@ class DoubleDQN(object):
         self.hidden_layer_size = hidden_layer_size
 
         self.memory = np.zeros((memory_size, n_features * 2 + 2))
-        self.create_network()
+        self.build_graph()
 
         eval_params = tf.get_collection('eval_net_params')
         target_params = tf.get_collection('target_net_params')
@@ -42,8 +42,9 @@ class DoubleDQN(object):
         self.q = None
 
         self.epsilon = 0
+        self.memory_counter = 0
 
-    def create_network(self):
+    def build_graph(self):
         self.state = tf.placeholder(dtype = tf.float32,
                                     shape=[None,self.n_features],
                                     name='current_state')
@@ -97,10 +98,15 @@ class DoubleDQN(object):
                                     shape=[None,self.n_features],
                                     name='next_state')
         self.target_net = build_net(c_name_target,self.state_)
+
+
+
+    def save_transition(self, state, action,reward,state_):
+        transition = np.hstack((state,[action,reward], state_))
+        index = self.memory_counter % self.memory_size
+        self.memory[index:,] = transition
+        self.memory_counter += 1
         
-
-
-
     def choose_action(self, observation):
         pass
     
