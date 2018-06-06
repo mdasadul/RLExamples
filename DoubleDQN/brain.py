@@ -13,7 +13,9 @@ class DoubleDQN(object):
         double_dqn = False,
         sess = None,
         memory_size = 5000,
-        hidden_layer_size = 10
+        hidden_layer_size = 10,
+        batch_size = 32,
+        epsilon_increment = None
     ):
         self.n_actions = n_actions
         self.n_features = n_features
@@ -25,15 +27,19 @@ class DoubleDQN(object):
         self.sess = sess 
         self.memory_size = memory_size
         self.hidden_layer_size = hidden_layer_size
-
+        self.batch_size = batch_size
         self.memory = np.zeros((memory_size, n_features * 2 + 2))
-        self.build_graph()
-
-        eval_params = tf.get_collection('eval_net_params')
-        target_params = tf.get_collection('target_net_params')
-
+        self.epsilon_increment = epsilon_increment
         self.replace_target_op = [tf.assign(t,e) for (e,t) in zip(eval_params, target_params)]
 
+        self.epsilon = 0 if epsilon_increment is not None else self.epsilon_max
+        
+
+
+        self.build_graph()
+        eval_params = tf.get_collection('eval_net_params')
+        target_params = tf.get_collection('target_net_params')
+        
 
         if self.sess ==None:
             self.sess = tf.Session()
@@ -44,6 +50,8 @@ class DoubleDQN(object):
 
         self.epsilon = 0
         self.memory_counter = 0
+        self.global_step = 0
+        self.total_loss =[]
 
     def build_graph(self):
         self.state = tf.placeholder(dtype = tf.float32,
@@ -85,8 +93,8 @@ class DoubleDQN(object):
 
         c_name_eval = ['eval_net_params', tf.GraphKeys.GLOBAL_VARIABLES]
         c_name_target = ['eval_net_params', tf.GraphKeys.GLOBAL_VARIABLES]
-        
-        self.eval_net = build_net(c_name_eval,self.state)
+        with tf.variable_scope('eval_net'):
+            self.eval_net = build_net(c_name_eval,self.state)
 
         self.q_target = tf.placeholder(dtype = tf.float32,
                                         shape= [None,self.n_actions],
@@ -98,7 +106,8 @@ class DoubleDQN(object):
         self.state_ = tf.placeholder(dtype = tf.float32,
                                     shape=[None,self.n_features],
                                     name='next_state')
-        self.target_net = build_net(c_name_target,self.state_)
+        with tf.variable_scope('target_net'):
+            self.q_next = build_net(c_name_target,self.state_)
 
 
 
@@ -121,4 +130,47 @@ class DoubleDQN(object):
 
     
     def learn(self):
-        pass
+        if self.global_step % self.replace_target_step ==0:
+            self.sess.run(self.replace_target_op)
+        
+        if self.memory_counter > self.memory_size:
+            index = np.random.choice(self.memory_size, self.batch_size )
+        else:
+            index = np.random.choice(self.memory_counter, self.batch_size )
+        
+        batch_memory = self.memory[index,:]
+
+
+        q_next, q_eval_next = self.sess.run([self.q_next,self.eval_net],feed_dict={self.state: batch_memory[:,-self.n_features:],
+                                    self.state_: batch_memory[:,-self.n_features] })
+        
+        q_eval = self.sess.run(self.eval_net, feed_dict={self.state: batch_memory[:,:self.n_features]})
+        
+        q_index = np.arange(self.batch_size)
+        eval_index = batch_memory[:,self.n_features].astype(int)
+        reward = batch_memory[:,self.n_features+1]
+
+        if self.double_dqn:
+            eval_index_q = np.argmax(q_eval_next,axis = 1)
+            selected_next_q = q_next[q_index,eval_index_q]
+        else:
+            selected_next_q = np.max(q_next, axis= 1)
+
+        q_target = q_eval.copy()
+        q_target[q_index, eval_index] = reward + self.gamma * selected_next_q
+
+        _, loss = self.sess.run([self.loss,self.training_op],feed_dict ={
+                    self.q_target:q_target, 
+                    self.state: batch_memory[:,:self.n_features]
+        })
+
+        self.total_loss.append(loss)
+        
+        
+        self.epsilon = self.epsilon + self.epsilon_increment if self.epsilon <self.epsilon_max else self.epsilon_max
+        self.global_step +=1
+
+
+
+        
+
