@@ -43,7 +43,7 @@ class Actor(object):
         observation = observation[np.newaxis,:]
         action_prob  = self.sess.run(self.action_prob, feed_dict = {self.state:observation})
 
-        action = np.random.choice(action_prob.shape[1],action_prob.ravel())
+        action = np.random.choice(np.arange(action_prob.shape[1]),p=action_prob.ravel())
         return action 
 
 
@@ -111,7 +111,7 @@ for episode in range(1000):
     while True:
         #action = env.step(state)
         env.render()
-        
+
         action = actor.choose_action(state)
         state_, reward, done, info = env.step(action)
 
