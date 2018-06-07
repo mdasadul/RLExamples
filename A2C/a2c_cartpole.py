@@ -54,9 +54,8 @@ class Actor(object):
         return exp_v
 
 class Critic(object):
-    def __init__(self, n_features, n_action, sess, learning_rate= 0.01,gamma = 0.9):
+    def __init__(self, n_features, sess, learning_rate= 0.01,gamma = 0.9):
         self.n_features = n_features
-        self.n_action = n_action
         self.learning_rate = learning_rate
         self.sess = sess
         self.gamma = gamma
@@ -74,7 +73,7 @@ class Critic(object):
         
         
             self.v = tf.layers.dense(inputs = l1,
-                                units = self.n_action,
+                                units = 1,
                                 activation=None,
                                 kernel_initializer= tf.random_normal_initializer(0.,0.2),
                                 bias_initializer=tf.constant_initializer(0.1),
@@ -97,6 +96,32 @@ class Critic(object):
         return td_error
 
         
+
+n_features = env.observation_space.shape[0]
+n_action = env.action_space.n
+
+session = tf.Session()
+
+actor = Actor(n_features,n_action, session,)
+critics = Critic(n_features, session)
+session.run(tf.global_variables_initializer())
+
+for episode in range(1000):
+    state = env.reset()
+    while True:
+        #action = env.step(state)
+        env.render()
+        
+        action = actor.choose_action(state)
+        state_, reward, done, info = env.step(action)
+
+        td_error = critics.learn(state, reward, state_)
+        actor.learn(state, action, td_error)
+        state = state_
+
+
+
+
 
 
 
